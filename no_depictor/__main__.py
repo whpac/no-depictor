@@ -6,7 +6,7 @@ from urllib.parse import quote
 from requests import Session
 import sys
 
-from .clients import CommonsAPI, Depictor, PetScan
+from .clients import CommonsAPI, Depictor, PetScan, WikidataAPI
 from .config import getConfig
 from .data._category_descriptor import CategoryDescriptor
 from .interrupt_handler import interruptible, InterruptHandler
@@ -35,6 +35,7 @@ def main():
         })
 
         commons = CommonsAPI(session)
+        wikidata = WikidataAPI(session)
         petscan = PetScan(session)
         depictor = Depictor(args['user'], args['sessid'], session)
     except KeyboardInterrupt:
@@ -71,7 +72,7 @@ def main():
                 continue
 
             console.print(f'Found {len(undoneCategories)} subcategories not done in Depictor.')
-            doWorkForUndoneCategories(undoneCategories, commons, depictor, status, console, ih)
+            doWorkForUndoneCategories(undoneCategories, commons, depictor, wikidata, status, console, ih)
 
 
 def getCategories(args: dict, console: Console) -> list[str]:
@@ -93,12 +94,22 @@ def doWorkForUndoneCategories(
         undoneCategories: list[CategoryDescriptor],
         commons: CommonsAPI,
         depictor: Depictor,
+        wikidata: WikidataAPI,
         status: Status,
         console: Console,
         ih: InterruptHandler
     ):
     for category in interruptible(undoneCategories, ih):
         qId, catName = category
+
+        status.update(status=f'Checking if {catlink(catName)} ({qId}) has an image set on Wikidata (P18)')
+        try:
+            if not wikidata.hasImageClaim(qId):
+                console.print(f'[cyan]Skipping ({catlink(catName)}) ({qId}) because it has no image.[/cyan]')
+                continue
+        except Exception as e:
+            console.print(f'[red]Failed to check Wikidata item {qId} ({catlink(catName)}) for P18:[/red] {escape(str(e))}')
+            continue
 
         status.update(status=f'Searching for files not depicting subject {qId} in {catlink(catName)}')
         try:
