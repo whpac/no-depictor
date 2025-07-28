@@ -11,7 +11,6 @@ def getConfig(console: Console):
     parser = ArgumentParser(description='A tool for mass-marking Wikimedia Commons images as not-depiciting a given subject.')
     parser.add_argument('--category', type=str, help='Category name whose subcategories to process')
     parser.add_argument('--categoryfile', type=str, help='File containing category names whose subcategories to process')
-    parser.add_argument('--depth', type=int, help='Depth of subcategories to fetch')
     parser.add_argument('--user', type=str, help='Username for Depictor API')
     parser.add_argument('--sessid', type=str, help='PHP session ID for Depictor API')
     parser.add_argument('--config', type=str, help='Path to the configuration file, set to "-" to disable')
@@ -63,18 +62,6 @@ def _askUserForMissingArgs(allArgs: dict, cliArgs: Namespace, console: Console) 
             allArgs['category'] = None
         else:
             allArgs['categoryfile'] = None
-    
-    if _absent('depth', cliArgs):
-        while True:
-            response = IntPrompt.ask(
-                'Depth of subcategory search',
-                default=allArgs.get('depth') or 2,
-                console=console
-            )
-            if response >= 0:
-                break
-            console.print('[bold red]Error: Depth must be a non-negative integer. Please try again.')
-        allArgs['depth'] = response
 
     if _absent('user', cliArgs):
         allArgs['user'] = (Prompt.ask(

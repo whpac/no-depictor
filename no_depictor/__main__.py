@@ -2,7 +2,7 @@ from time import sleep
 from rich.console import Console
 from rich.status import Status
 from rich.markup import escape
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 from requests import Session
 import sys
 
@@ -42,36 +42,48 @@ def main():
         console.print('[bold red]Interrupted by user.')
         sys.exit(1)
 
-    depth = args['depth']
     with console.status('Initializing') as status, InterruptHandler() as ih:
         for rootCategory in interruptible(rootCategories, ih):
-            console.rule(catlink(rootCategory))
-            status.update(status=f'Fetching subcategories for {catlink(rootCategory)} with depth {depth}')
-
-            try:
-                categories = petscan.getSubcategories(rootCategory, depth)
-            except Exception as e:
-                console.print(f'[red]Failed to fetch subcategories for {catlink(rootCategory)}:[/red] {escape(str(e))}')
-                continue
+            if '|' in rootCategory:
+                rootCategory, depth = rootCategory.split('|', 1)
+                rootCategory = unquote(rootCategory.strip())
+                console.rule(catlink(rootCategory))
+                depth = int(depth.strip())
+                status.update(status=f'Fetching subcategories for {catlink(rootCategory)} with depth {depth}')
+                
+                try:
+                    categories = petscan.getSubcategories(rootCategory, depth)
+                except Exception as e:
+                    console.print(f'[red]Failed to fetch subcategories for {catlink(rootCategory)}:[/red] {escape(str(e))}')
+                    continue
+            else:
+                rootCategory = unquote(rootCategory.strip())
+                console.rule(catlink(rootCategory))
+                status.update(status=f'Getting QID for {catlink(rootCategory)}')
+                try:
+                    categories = [wikidata.getItemForCommonsCategory(rootCategory)]
+                except Exception as e:
+                    console.print(f'[red]Failed to get QID for {catlink(rootCategory)}:[/red] {escape(str(e))}')
+                    continue
 
             if not categories:
                 console.print(f'No subcategories of {catlink(rootCategory)} found.')
                 continue
 
-            console.print(f'Found {len(categories)} subcategories in total.')
+            console.print(f'Found {len(categories)} categories in total.')
             status.update(status=f'Finding categories already done in Depictor')
 
             try:
                 undoneCategories = depictor.getUndoneCategories(categories)
             except Exception as e:
-                console.print(f'[red]Failed to fetch check which subcategories of {catlink(rootCategory)} were done:[/red] {escape(str(e))}')
+                console.print(f'[red]Failed to fetch check which categories of were done:[/red] {escape(str(e))}')
                 continue
 
             if not undoneCategories:
-                console.print(f'All subcategories of {catlink(rootCategory)} are already done in Depictor.')
+                console.print(f'All categories of have already been done in Depictor.')
                 continue
 
-            console.print(f'Found {len(undoneCategories)} subcategories not done in Depictor.')
+            console.print(f'Found {len(undoneCategories)} categories not done in Depictor.')
             doWorkForUndoneCategories(undoneCategories, commons, depictor, wikidata, status, console, ih)
 
 
