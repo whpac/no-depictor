@@ -33,6 +33,12 @@ class InterruptHandler:
         self._released = True
 
 
+    def forceInterrupt(self):
+        if self._released:
+            return
+        self._interrupted = True
+
+
 T = TypeVar('T')
 def interruptible(iterable: Iterable[T], ih: InterruptHandler) -> Iterable[T]:
     '''

@@ -139,10 +139,15 @@ def doWorkForUndoneCategories(
         for i, (mId, fileName) in interruptible(enumerate(undoneFiles), ih):
             status.update(status=f'Processing {catlink(catName)} ({i+1}/{len(undoneFiles)}): {pagelink(fileName)} ({mId})')
             try:
-                depictor.markFileAsNotDepictingSubject(mId, category)
+                # depictor.markFileAsNotDepictingSubject(mId, category)
+                pass
             except Exception as e:
                 console.print(f'[red]Failed to mark {pagelink(fileName)} ({mId}) as not depicting {qId}:[/red] {escape(str(e))}')
-            sleep(0.5) # To avoid overloading the server
+            
+            try:
+                sleep(0.5) # To avoid overloading the server
+            except KeyboardInterrupt:
+                ih.forceInterrupt() # Just in case if SIGINT gets somehow missed
 
         # They won't be equal only if we interrupted the loop early
         if i+1 < len(undoneFiles):
@@ -150,7 +155,8 @@ def doWorkForUndoneCategories(
         else:
             status.update(status=f'Marking category {catlink(catName)} as done')
             try:
-                depictor.markCategoryAsDone(qId)
+                # depictor.markCategoryAsDone(qId)
+                pass
             except Exception as e:
                 console.print(f'[red]Failed to mark category {catlink(catName)} as done:[/red] {escape(str(e))}')
             console.print(f'Processed {catlink(catName)} with {len(undoneFiles)} files.')
