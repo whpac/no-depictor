@@ -14,6 +14,7 @@ def getConfig(console: Console):
     parser.add_argument('--user', type=str, help='Username for Depictor API')
     parser.add_argument('--sessid', type=str, help='PHP session ID for Depictor API')
     parser.add_argument('--config', type=str, help='Path to the configuration file, set to "-" to disable')
+    parser.add_argument('--dry-run', action='store_true', help='Perform a dry run without making any changes')
 
     args = parser.parse_args()
     combinedArgs = { key: getattr(args, key, None) for key in vars(args) }

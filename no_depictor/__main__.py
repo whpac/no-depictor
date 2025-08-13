@@ -84,7 +84,7 @@ def main():
                 continue
 
             console.print(f'Found {len(undoneCategories)} categories not done in Depictor.')
-            doWorkForUndoneCategories(undoneCategories, commons, depictor, wikidata, status, console, ih)
+            doWorkForUndoneCategories(undoneCategories, commons, depictor, wikidata, status, console, ih, args.get('dry-run', False))
 
 
 def getCategories(args: dict, console: Console) -> list[str]:
@@ -92,7 +92,7 @@ def getCategories(args: dict, console: Console) -> list[str]:
         return [args['category']]
     if args.get('categoryfile'):
         try:
-            with open(args['categoryfile'], 'r') as file:
+            with open(args['categoryfile'], 'r', encoding='utf-8') as file:
                 return [line.strip() for line in file if line.strip()]
         except FileNotFoundError:
             console.print(f'[bold red]Error: Category file `{args["categoryfile"]}` not found.')
@@ -109,7 +109,8 @@ def doWorkForUndoneCategories(
         wikidata: WikidataAPI,
         status: Status,
         console: Console,
-        ih: InterruptHandler
+        ih: InterruptHandler,
+        dryRun: bool = False
     ):
     for category in interruptible(undoneCategories, ih):
         qId, catName = category
@@ -139,8 +140,8 @@ def doWorkForUndoneCategories(
         for i, (mId, fileName) in interruptible(enumerate(undoneFiles), ih):
             status.update(status=f'Processing {catlink(catName)} ({i+1}/{len(undoneFiles)}): {pagelink(fileName)} ({mId})')
             try:
-                # depictor.markFileAsNotDepictingSubject(mId, category)
-                pass
+                if not dryRun:
+                    depictor.markFileAsNotDepictingSubject(mId, category)
             except Exception as e:
                 console.print(f'[red]Failed to mark {pagelink(fileName)} ({mId}) as not depicting {qId}:[/red] {escape(str(e))}')
             
@@ -155,7 +156,8 @@ def doWorkForUndoneCategories(
         else:
             status.update(status=f'Marking category {catlink(catName)} as done')
             try:
-                # depictor.markCategoryAsDone(qId)
+                if not dryRun:
+                    depictor.markCategoryAsDone(qId)
                 pass
             except Exception as e:
                 console.print(f'[red]Failed to mark category {catlink(catName)} as done:[/red] {escape(str(e))}')
