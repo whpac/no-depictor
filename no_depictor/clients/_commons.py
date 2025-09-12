@@ -23,7 +23,8 @@ class CommonsAPI:
         while True:
             response = self.httpSession.get(
                 'https://commons.wikimedia.org/w/api.php',
-                params=requestParams
+                params=requestParams,
+                timeout=60,
             ).json()
 
             searchResults = response.get('query', {}).get('search', [])

@@ -24,7 +24,8 @@ class PetScan:
         
         response = self.httpSession.get(
             'https://petscan.wmcloud.org/',
-            params=requestParams
+            params=requestParams,
+            timeout=60,
         )
 
         # PetScan JSON response is far from self-explanatory,

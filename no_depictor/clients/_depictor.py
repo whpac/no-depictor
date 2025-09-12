@@ -22,7 +22,8 @@ class Depictor:
             json=requestParams,
             cookies={
                 'PHPSESSID': self.phpSessionId,
-            }
+            },
+            timeout=60,
         )
         doneDictionary = response.json()
 
@@ -43,7 +44,8 @@ class Depictor:
             json=requestParams,
             cookies={
                 'PHPSESSID': self.phpSessionId,
-            }
+            },
+            timeout=60,
         )
         doneMids = response.json()
 
@@ -71,7 +73,8 @@ class Depictor:
             params=requestParams,
             cookies={
                 'PHPSESSID': self.phpSessionId,
-            }
+            },
+            timeout=60,
         )
         
         success = response.status_code == 200 and response.json().get('ok') == 'Added'
@@ -93,7 +96,8 @@ class Depictor:
             json=requestParams,
             cookies={
                 'PHPSESSID': self.phpSessionId,
-            }
+            },
+            timeout=60,
         )
         
         success = response.status_code == 200 and response.json().get('ok') == 'Added'

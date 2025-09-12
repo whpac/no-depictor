@@ -17,7 +17,8 @@ class WikidataAPI:
 
         response = self.httpSession.get(
             'https://www.wikidata.org/w/api.php',
-            params=requestParams
+            params=requestParams,
+            timeout=60,
         ).json()
 
         itemData = response.get('entities', {}).get(qId, {})
@@ -43,6 +44,7 @@ class WikidataAPI:
         response = self.httpSession.get(
             'https://query.wikidata.org/sparql',
             params=requestParams,
+            timeout=60,
         ).json()
 
         if 'results' not in response or 'bindings' not in response['results']:
