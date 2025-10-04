@@ -3,7 +3,7 @@ import json
 import os
 import sys
 from rich.console import Console
-from rich.prompt import Prompt, IntPrompt, Confirm
+from rich.prompt import Prompt, Confirm
 
 def getConfig(console: Console):
     DEFAULT_CONFIG_FILE = 'config.json'
@@ -11,6 +11,7 @@ def getConfig(console: Console):
     parser = ArgumentParser(description='A tool for mass-marking Wikimedia Commons images as not-depiciting a given subject.')
     parser.add_argument('--category', type=str, help='Category name whose subcategories to process')
     parser.add_argument('--categoryfile', type=str, help='File containing category names whose subcategories to process')
+    parser.add_argument('--logfile', type=str, help='Path to the log file (default: no_depictor.log)')
     parser.add_argument('--user', type=str, help='Username for Depictor API')
     parser.add_argument('--sessid', type=str, help='PHP session ID for Depictor API')
     parser.add_argument('--config', type=str, help='Path to the configuration file, set to "-" to disable')
@@ -18,6 +19,8 @@ def getConfig(console: Console):
 
     args = parser.parse_args()
     combinedArgs = { key: getattr(args, key, None) for key in vars(args) }
+    if combinedArgs.get('dry_run') == False:
+        combinedArgs['dry_run'] = None  # False is the default, for not set
 
     if args.config != '-':
         try:
@@ -81,6 +84,16 @@ def _askUserForMissingArgs(allArgs: dict, cliArgs: Namespace, console: Console) 
 
         if response != REUSE_LAST:
             allArgs['sessid'] = response
+
+    if _absent('logfile', cliArgs):
+        allArgs['logfile'] = Prompt.ask(
+            'Path to the log file',
+            default=allArgs.get('logfile', 'no_depictor.log'),
+            console=console
+        ) or 'no_depictor.log'
+
+    if not allArgs.get('dry_run', False):
+        allArgs['dry_run'] = False
 
     return allArgs
 

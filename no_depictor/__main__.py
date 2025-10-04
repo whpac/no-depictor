@@ -1,3 +1,5 @@
+from datetime import datetime
+from io import TextIOWrapper
 from time import sleep
 from rich.console import Console
 from rich.status import Status
@@ -42,6 +44,14 @@ def main():
         console.print('[bold red]Interrupted by user.')
         sys.exit(1)
 
+    logPath = args.get('logfile', 'no_depictor.log')
+    try:
+        logFile = open(logPath, 'a', encoding='utf-8')
+        logToFile(logFile, 'INFO', f'Starting new run over {len(rootCategories)} root categories.')
+    except Exception as e:
+        console.print(f'[bold red]Failed to open log file `{logPath}` for writing: {e}')
+        sys.exit(1)
+
     with console.status('Initializing') as status, InterruptHandler() as ih:
         for rootCategory in interruptible(rootCategories, ih):
             if '|' in rootCategory:
@@ -50,24 +60,29 @@ def main():
                 console.rule(catlink(rootCategory))
                 depth = int(depth.strip())
                 status.update(status=f'Fetching subcategories for {catlink(rootCategory)} with depth {depth}')
+                logToFile(logFile, 'INFO', f'Fetching subcategories for {catlink(rootCategory, False)} with depth {depth}')
                 
                 try:
                     categories = petscan.getSubcategories(rootCategory, depth)
                 except Exception as e:
                     console.print(f'[red]Failed to fetch subcategories for {catlink(rootCategory)}:[/red] {escape(str(e))}')
+                    logToFile(logFile, 'ERROR', f'Failed to fetch subcategories for {catlink(rootCategory, False)}: {str(e)}')
                     continue
             else:
                 rootCategory = unquote(rootCategory.strip())
                 console.rule(catlink(rootCategory))
                 status.update(status=f'Getting QID for {catlink(rootCategory)}')
+                logToFile(logFile, 'INFO', f'Getting QID for {catlink(rootCategory, False)}')
                 try:
                     categories = [wikidata.getItemForCommonsCategory(rootCategory)]
                 except Exception as e:
                     console.print(f'[red]Failed to get QID for {catlink(rootCategory)}:[/red] {escape(str(e))}')
+                    logToFile(logFile, 'ERROR', f'Failed to get QID for {catlink(rootCategory, False)}: {str(e)}')
                     continue
 
             if not categories:
                 console.print(f'No subcategories of {catlink(rootCategory)} found.')
+                logToFile(logFile, 'WARN', 'No categories to process.')
                 continue
 
             console.print(f'Found {len(categories)} categories in total.')
@@ -76,15 +91,21 @@ def main():
             try:
                 undoneCategories = depictor.getUndoneCategories(categories)
             except Exception as e:
-                console.print(f'[red]Failed to fetch check which categories of were done:[/red] {escape(str(e))}')
+                console.print(f'[red]Failed to fetch check which categories of {catlink(rootCategory)} were done:[/red] {escape(str(e))}')
+                logToFile(logFile, 'ERROR', f'Failed to check which categories of were done in Depictor: {str(e)}')
                 continue
 
             if not undoneCategories:
-                console.print(f'All categories of have already been done in Depictor.')
+                console.print(f'All categories of {catlink(rootCategory)} have already been done in Depictor.')
+                logToFile(logFile, 'INFO', 'All categories have already been done in Depictor.')
                 continue
 
             console.print(f'Found {len(undoneCategories)} categories not done in Depictor.')
-            doWorkForUndoneCategories(undoneCategories, commons, depictor, wikidata, status, console, ih, args.get('dry-run', False))
+            logToFile(logFile, 'INFO', f'Found {len(undoneCategories)} categories not done in Depictor.')
+            doWorkForUndoneCategories(undoneCategories, commons, depictor, wikidata, status, console, ih, logFile, args.get('dry_run', False))
+    
+    logToFile(logFile, 'INFO', 'Finished execution.')
+    logFile.close()
 
 
 def getCategories(args: dict, console: Console) -> list[str]:
@@ -110,18 +131,22 @@ def doWorkForUndoneCategories(
         status: Status,
         console: Console,
         ih: InterruptHandler,
+        logFile: TextIOWrapper,
         dryRun: bool = False
     ):
     for category in interruptible(undoneCategories, ih):
         qId, catName = category
 
         status.update(status=f'Checking if {catlink(catName)} ({qId}) has an image set on Wikidata (P18)')
+        logToFile(logFile, 'INFO', f'Processing category {catlink(catName, False)} ({qId})')
         try:
             if not wikidata.hasImageClaim(qId):
                 console.print(f'[cyan]Skipping ({catlink(catName)}) ({qId}) because it has no image.[/cyan]')
+                logToFile(logFile, 'INFO', f'Skipped {catlink(catName, False)} ({qId}) because it has no image.')
                 continue
         except Exception as e:
             console.print(f'[red]Failed to check Wikidata item {qId} ({catlink(catName)}) for P18:[/red] {escape(str(e))}')
+            logToFile(logFile, 'ERROR', f'Failed to check Wikidata item {qId} ({catlink(catName, False)}) for P18: {str(e)}')
             continue
 
         status.update(status=f'Searching for files not depicting subject {qId} in {catlink(catName)}')
@@ -130,10 +155,12 @@ def doWorkForUndoneCategories(
             undoneFiles = depictor.getUndoneFiles(files)
         except Exception as e:
             console.print(f'[red]Failed to fetch files for {catlink(catName)}:[/red] {escape(str(e))}')
+            logToFile(logFile, 'ERROR', f'Failed to fetch files for {catlink(catName, False)}: {str(e)}')
             continue
 
         if not undoneFiles:
             console.print(f'No files to process in {catlink(catName)}.')
+            logToFile(logFile, 'WARN', f'No files to process in {catlink(catName, False)}.')
             continue
 
         i = -1 # To be able to print the "Interrupted" message even before first item
@@ -144,6 +171,7 @@ def doWorkForUndoneCategories(
                     depictor.markFileAsNotDepictingSubject(mId, category)
             except Exception as e:
                 console.print(f'[red]Failed to mark {pagelink(fileName)} ({mId}) as not depicting {qId}:[/red] {escape(str(e))}')
+                logToFile(logFile, 'ERROR', f'Failed to mark {pagelink(fileName, False)} ({mId}) as not depicting {qId}: {str(e)}')
             
             try:
                 sleep(0.5) # To avoid overloading the server
@@ -153,6 +181,7 @@ def doWorkForUndoneCategories(
         # They won't be equal only if we interrupted the loop early
         if i+1 < len(undoneFiles):
             console.print(f'[yellow]Interrupted processing {catlink(catName)} after {i+1}/{len(undoneFiles)} files.')
+            logToFile(logFile, 'WARN', f'Interrupted processing {catlink(catName, False)} after {i+1}/{len(undoneFiles)} files.')
         else:
             status.update(status=f'Marking category {catlink(catName)} as done')
             try:
@@ -161,16 +190,35 @@ def doWorkForUndoneCategories(
                 pass
             except Exception as e:
                 console.print(f'[red]Failed to mark category {catlink(catName)} as done:[/red] {escape(str(e))}')
+                logToFile(logFile, 'ERROR', f'Failed to mark category {catlink(catName, False)} as done: {str(e)}')
             console.print(f'Processed {catlink(catName)} with {len(undoneFiles)} files.')
 
 
-def catlink(categoryName: str) -> str:
-    return pagelink('Category:' + categoryName)
+def catlink(categoryName: str, consoleFormat = True) -> str:
+    return pagelink('Category:' + categoryName, consoleFormat)
 
-def pagelink(pageName: str) -> str:
+
+def pagelink(pageName: str, consoleFormat = True) -> str:
     urlencoded = quote(pageName.replace(' ', '_'), safe=':/')
     displayName = pageName.replace('_', ' ')
+    if displayName.startswith('Category:') or displayName.startswith('File:'):
+        displayName = ':' + displayName
+    
+    if not consoleFormat:
+        return f'[[{displayName}]]'
     return f'[[[link=https://commons.wikimedia.org/wiki/{urlencoded}]{displayName}[/link]]]'
 
+
+def logToFile(logFile: TextIOWrapper, type: str, message: str):
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3] # Trim microseconds to milliseconds
+    prefix = f'* <!-- {now} | {type} --> '
+
+    lines = message.splitlines()
+    formattedMessage = prefix + lines[0].rstrip()
+    for line in lines[1:]:
+        formattedMessage += '\n*:' + ' ' * (len(prefix) - 2) + line.rstrip()
+
+    logFile.write(formattedMessage + '\n')
+    logFile.flush()
 
 main()
