@@ -60,6 +60,7 @@ def main():
                 console.rule(catlink(rootCategory))
                 depth = int(depth.strip())
                 status.update(status=f'Fetching subcategories for {catlink(rootCategory)} with depth {depth}')
+                logToFile(logFile, 'INFO', f'----------------------------------------------------------------------------')
                 logToFile(logFile, 'INFO', f'Fetching subcategories for {catlink(rootCategory, False)} with depth {depth}')
                 
                 try:
@@ -72,6 +73,7 @@ def main():
                 rootCategory = unquote(rootCategory.strip())
                 console.rule(catlink(rootCategory))
                 status.update(status=f'Getting QID for {catlink(rootCategory)}')
+                logToFile(logFile, 'INFO', f'----------------------------------------------------------------------------')
                 logToFile(logFile, 'INFO', f'Getting QID for {catlink(rootCategory, False)}')
                 try:
                     categories = [wikidata.getItemForCommonsCategory(rootCategory)]
@@ -138,7 +140,6 @@ def doWorkForUndoneCategories(
         qId, catName = category
 
         status.update(status=f'Checking if {catlink(catName)} ({qId}) has an image set on Wikidata (P18)')
-        logToFile(logFile, 'INFO', f'Processing category {catlink(catName, False)} ({qId})')
         try:
             if not wikidata.hasImageClaim(qId):
                 console.print(f'[cyan]Skipping ({catlink(catName)}) ({qId}) because it has no image.[/cyan]')
@@ -187,7 +188,7 @@ def doWorkForUndoneCategories(
             try:
                 if not dryRun:
                     depictor.markCategoryAsDone(qId)
-                pass
+                logToFile(logFile, 'INFO', f'Successfully processed category {catlink(catName, False)} ({qId})')
             except Exception as e:
                 console.print(f'[red]Failed to mark category {catlink(catName)} as done:[/red] {escape(str(e))}')
                 logToFile(logFile, 'ERROR', f'Failed to mark category {catlink(catName, False)} as done: {str(e)}')
