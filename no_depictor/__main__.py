@@ -188,7 +188,7 @@ def doWorkForUndoneCategories(
             try:
                 if not dryRun:
                     depictor.markCategoryAsDone(qId)
-                logToFile(logFile, 'INFO', f'Successfully processed category {catlink(catName, False)} ({qId})')
+                logToFile(logFile, 'INFO', f'Successfully processed category {catlink(catName, False)} ({qId}) with {len(undoneFiles)} files.')
             except Exception as e:
                 console.print(f'[red]Failed to mark category {catlink(catName)} as done:[/red] {escape(str(e))}')
                 logToFile(logFile, 'ERROR', f'Failed to mark category {catlink(catName, False)} as done: {str(e)}')
