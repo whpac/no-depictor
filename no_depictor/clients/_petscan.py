@@ -22,15 +22,22 @@ class PetScan:
             'doit': 1
         }
         
-        response = self.httpSession.get(
+        rawResponse = self.httpSession.get(
             'https://petscan.wmcloud.org/',
             params=requestParams,
             timeout=60,
         )
+        try:
+            response = rawResponse.json()
+        except Exception as e:
+            raise Exception(
+                'PetScan API responded with invalid JSON (response code: ' +
+                str(rawResponse.status_code) + '). Beginning of the response: ' + rawResponse.text[:200]
+            ) from e
 
         # PetScan JSON response is far from self-explanatory,
         # property path: response['*'][0]['a']['*']
-        items = response.json() \
+        items = response \
             .get('*', [{}])[0] \
             .get('a', {}) \
             .get('*', [])

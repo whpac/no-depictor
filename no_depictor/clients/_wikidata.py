@@ -15,11 +15,18 @@ class WikidataAPI:
             'format': 'json',
         }
 
-        response = self.httpSession.get(
+        rawResponse = self.httpSession.get(
             'https://www.wikidata.org/w/api.php',
             params=requestParams,
             timeout=60,
-        ).json()
+        )
+        try:
+            response = rawResponse.json()
+        except Exception as e:
+            raise Exception(
+                'Wikidata API responded with invalid JSON (response code: ' +
+                str(rawResponse.status_code) + '). Beginning of the response: ' + rawResponse.text[:200]
+            ) from e
 
         itemData = response.get('entities', {}).get(qId, {})
         claims = itemData.get('claims', {})
@@ -41,11 +48,18 @@ class WikidataAPI:
             'query': sparql,
         }
 
-        response = self.httpSession.get(
+        rawResponse = self.httpSession.get(
             'https://query.wikidata.org/sparql',
             params=requestParams,
             timeout=60,
-        ).json()
+        )
+        try:
+            response = rawResponse.json()
+        except Exception as e:
+            raise Exception(
+                'Wikidata Query API responded with invalid JSON (response code: ' +
+                str(rawResponse.status_code) + '). Beginning of the response: ' + rawResponse.text[:200]
+            ) from e
 
         if 'results' not in response or 'bindings' not in response['results']:
             raise Exception(f'Invalid response from Wikidata SPARQL: {response}')

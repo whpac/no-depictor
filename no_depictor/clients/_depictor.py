@@ -25,7 +25,13 @@ class Depictor:
             },
             timeout=60,
         )
-        doneDictionary = response.json()
+        try:
+            doneDictionary = response.json()
+        except Exception as e:
+            raise Exception(
+                'Depictor API responded with invalid JSON (response code: ' +
+                str(response.status_code) + '). Beginning of the response: ' + response.text[:200]
+            ) from e
 
         return [
             cat for cat in categories
@@ -47,7 +53,13 @@ class Depictor:
             },
             timeout=60,
         )
-        doneMids = response.json()
+        try:
+            doneMids = response.json()
+        except Exception as e:
+            raise Exception(
+                'Depictor API responded with invalid JSON (response code: ' +
+                str(response.status_code) + '). Beginning of the response: ' + response.text[:200]
+            ) from e
 
         return [
             file for file in files
@@ -68,7 +80,7 @@ class Depictor:
         # encode it manually to match the expected format.
         urlencodedCategory = urllib.parse.quote(category.title, safe='')
 
-        response = self.httpSession.get(
+        rawResponse = self.httpSession.get(
             'https://hay.toolforge.org/depictor/api/index.php?category=' + urlencodedCategory,
             params=requestParams,
             cookies={
@@ -76,11 +88,18 @@ class Depictor:
             },
             timeout=60,
         )
+        try:
+            response = rawResponse.json()
+        except Exception as e:
+            raise Exception(
+                'Depictor API responded with invalid JSON (response code: ' +
+                str(rawResponse.status_code) + '). Beginning of the response: ' + rawResponse.text[:200]
+            ) from e
         
-        success = response.status_code == 200 and response.json().get('ok') == 'Added'
+        success = rawResponse.status_code == 200 and response.get('ok') == 'Added'
         if not success:
             raise Exception(
-                f'Failed to mark file {mId} as not depicting {category.qId} in category {category.title}: {response.text}'
+                f'Failed to mark file {mId} as not depicting {category.qId} in category {category.title}: {rawResponse.text}'
             )
 
 
@@ -91,7 +110,7 @@ class Depictor:
             'user': self.userName,
         }
 
-        response = self.httpSession.post(
+        rawResponse = self.httpSession.post(
             'https://hay.toolforge.org/depictor/api/index.php',
             json=requestParams,
             cookies={
@@ -99,9 +118,16 @@ class Depictor:
             },
             timeout=60,
         )
+        try:
+            response = rawResponse.json()
+        except Exception as e:
+            raise Exception(
+                'Depictor API responded with invalid JSON (response code: ' +
+                str(rawResponse.status_code) + '). Beginning of the response: ' + rawResponse.text[:200]
+            ) from e
         
-        success = response.status_code == 200 and response.json().get('ok') == 'Added'
+        success = rawResponse.status_code == 200 and response.get('ok') == 'Added'
         if not success:
             raise Exception(
-                f'Failed to mark category of {qId} as done: {response.text}'
+                f'Failed to mark category of {qId} as done: {rawResponse.text}'
             )

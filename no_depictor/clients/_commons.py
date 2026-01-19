@@ -21,11 +21,18 @@ class CommonsAPI:
         }
 
         while True:
-            response = self.httpSession.get(
+            rawResponse = self.httpSession.get(
                 'https://commons.wikimedia.org/w/api.php',
                 params=requestParams,
                 timeout=60,
-            ).json()
+            )
+            try:
+                response = rawResponse.json()
+            except Exception as e:
+                raise Exception(
+                    'Wikimedia Commons API responded with invalid JSON (response code: ' +
+                    str(rawResponse.status_code) + '). Beginning of the response: ' + rawResponse.text[:200]
+                ) from e
 
             searchResults = response.get('query', {}).get('search', [])
             for result in searchResults:
