@@ -7,7 +7,7 @@ class WikidataAPI:
         self.httpSession = session
 
     
-    def hasImageClaim(self, qId: str) -> bool:
+    def hasImageClaim(self, qId: str, repeatable=True) -> bool:
         requestParams = {
             'action': 'wbgetentities',
             'ids': qId,
@@ -20,6 +20,14 @@ class WikidataAPI:
             params=requestParams,
             timeout=60,
         )
+        if rawResponse.status_code == 429 and repeatable:
+            # Too many requests - wait and try again
+            delay = int(rawResponse.headers.get('Retry-After', '5'))
+            print(f'Wikidata API rate limit exceeded. Retrying after {delay} seconds...')
+            import time
+            time.sleep(delay)
+            return self.hasImageClaim(qId, repeatable=False)
+
         try:
             response = rawResponse.json()
         except Exception as e:
@@ -34,7 +42,7 @@ class WikidataAPI:
         return 'P18' in claims
     
 
-    def getItemForCommonsCategory(self, categoryName: str) -> CategoryDescriptor:
+    def getItemForCommonsCategory(self, categoryName: str, repeatable=True) -> CategoryDescriptor:
         sparql = f'''
             select ?item ?image ?cat where {{
               ?item wdt:P18 ?image;
@@ -53,6 +61,14 @@ class WikidataAPI:
             params=requestParams,
             timeout=60,
         )
+        if rawResponse.status_code == 429 and repeatable:
+            # Too many requests - wait and try again
+            delay = int(rawResponse.headers.get('Retry-After', '5'))
+            print(f'Wikidata API rate limit exceeded. Retrying after {delay} seconds...')
+            import time
+            time.sleep(delay)
+            return self.getItemForCommonsCategory(categoryName, repeatable=False)
+        
         try:
             response = rawResponse.json()
         except Exception as e:

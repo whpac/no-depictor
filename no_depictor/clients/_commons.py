@@ -26,6 +26,14 @@ class CommonsAPI:
                 params=requestParams,
                 timeout=60,
             )
+            if rawResponse.status_code == 429:
+                # Too many requests - wait and try again
+                delay = int(rawResponse.headers.get('Retry-After', '5'))
+                print(f'Wikimedia Commons API rate limit exceeded. Retrying after {delay} seconds...')
+                import time
+                time.sleep(delay)
+                continue
+
             try:
                 response = rawResponse.json()
             except Exception as e:
